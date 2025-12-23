@@ -12,26 +12,36 @@ app.use(express.json());
 const PAYMENT_CONFIRMATION_URL = `${process.env.FRONT_END_URL}/payment-confirmation`;
 
 app.post("/create-checkout-session", async (req, res) => {
-  console.log(req.body);
-  const items = req.body.products.map((product) => ({
-    price_data: {
-      currency: "brl",
-      product_data: {
-        name: product.name,
+  try {
+    const items = req.body.products.map((product) => ({
+      price_data: {
+        currency: "brl",
+        product_data: {
+          name: product.name,
+        },
+        unit_amount: parseInt(`${product.price}00`),
       },
-      unit_amount: parseInt(`${product.price}00`),
-    },
-    quantity: product.quantity,
-  }));
+      quantity: product.quantity,
+    }));
 
-  const session = await stripe.checkout.sessions.create({
-    line_items: items,
-    mode: "payment",
-    success_url: `${PAYMENT_CONFIRMATION_URL}?success=true`,
-    cancel_url: `${PAYMENT_CONFIRMATION_URL}?canceled=true`,
-  });
+    const session = await stripe.checkout.sessions.create({
+      line_items: items,
+      mode: "payment",
+      success_url: `${PAYMENT_CONFIRMATION_URL}?success=true`,
+      cancel_url: `${PAYMENT_CONFIRMATION_URL}?canceled=true`,
+    });
 
-  res.send({ url: session.url });
+    res.send({ url: session.url });
+  } catch (error) {
+    console.error("Stripe error:", error);
+    res.status(500).json({
+      message: "Erro ao iniciar o pagamento. Tente novamente.",
+    });
+  }
 });
 
-app.listen(5000, () => console.log("Running on port 5000"));
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`Stripe API running on port ${PORT}`);
+});
